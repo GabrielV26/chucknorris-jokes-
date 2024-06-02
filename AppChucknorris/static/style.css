@@ -12,7 +12,7 @@ body {
     text-align: center;
 }
 
-h1 {
+h1, label{
     color: #ff0000; 
     margin: 20px 0;
     text-shadow: 2px 2px #000; 

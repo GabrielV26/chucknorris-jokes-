@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,11 +11,33 @@
     <script>
         async function fetchJoke() {
             try {
-                let response = await fetch("{% url 'random_joke' %}");
+                let category = document.getElementById("category").value;
+                let url = "{% url 'random_joke' %}";
+                if (category) {
+                    url += `?category=${category}`;
+                }
+                let response = await fetch(url);
                 let data = await response.json();
                 document.getElementById("joke").innerText = data.joke;
             } catch (error) {
                 document.getElementById("joke").innerText = "Failed to retrieve joke";
+            }
+        }
+
+        // Função para obter categorias dinamicamente e preenchê-las no dropdown
+        async function loadCategories() {
+            try {
+                let response = await fetch('https://api.chucknorris.io/jokes/categories');
+                let categories = await response.json();
+                let categorySelect = document.getElementById("category");
+                categories.forEach(function (category) {
+                    let option = document.createElement("option");
+                    option.value = category;
+                    option.text = category.charAt(0).toUpperCase() + category.slice(1);
+                    categorySelect.add(option);
+                });
+            } catch (error) {
+                console.error("Failed to load categories");
             }
         }
 
@@ -41,15 +64,38 @@
         }
 
         document.addEventListener('DOMContentLoaded', (event) => {
+            loadCategories();
             fetchJoke();
         });
     </script>
 </head>
+
 <body>
+    <label for="category">Select Category:</label>
+    <select id="category">
+        <option value="">Random</option>
+        <option value="animal">Animal</option>
+        <option value="career">Career</option>
+        <option value="celebrity">Celebrity</option>
+        <option value="dev">Dev</option>
+        <option value="explicit">Explicit</option>
+        <option value="fashion">Fashion</option>
+        <option value="food">Food</option>
+        <option value="history">History</option>
+        <option value="money">Money</option>
+        <option value="movie">Movie</option>
+        <option value="music">Music</option>
+        <option value="political">Political</option>
+        <option value="religion">Religion</option>
+        <option value="science">Science</option>
+        <option value="sport">Sport</option>
+        <option value="travel">Travel</option>
+    </select>
     <h1>Chuck Norris Jokes</h1>
     <p id="joke"></p>
-    <button onclick="fetchJoke()">New joke</button>
+    <button id="get-joke-btn" onclick="fetchJoke()">Get Joke</button>
     <button onclick="saveJoke()">Save joke</button>
     {% csrf_token %}
 </body>
+
 </html>
