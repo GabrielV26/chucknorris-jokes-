@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chucknorris Joke</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        async function fetchJoke() {
+            try {
+                let response = await fetch("{% url 'random_joke' %}");
+                let data = await response.json();
+                document.getElementById("joke").innerText = data.joke;
+            } catch (error) {
+                document.getElementById("joke").innerText = "Failed to retrieve joke";
+            }
+        }
+
+        async function saveJoke() {
+            try {
+                let joke = document.getElementById("joke").innerText;
+                let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                let response = await fetch("{% url 'add_joke' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ text: joke })
+                });
+                if (response.ok) {
+                    alert('Joke saved successfully!');
+                } else {
+                    alert('Failed to save joke');
+                }
+            } catch (error) {
+                alert('Failed to save joke');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            fetchJoke();
+        });
+    </script>
+</head>
+<body>
+    <h1>Chuck Norris Jokes</h1>
+    <p id="joke"></p>
+    <button onclick="fetchJoke()">New joke</button>
+    <button onclick="saveJoke()">Save joke</button>
+    {% csrf_token %}
+</body>
+</html>
