@@ -13,7 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      DJANGO_SECRET_KEY: ci-test-key-not-for-deployment
+      DJANGO_SECRET_KEY: ci-test-secret-key-for-automated-checks-not-used-in-production-2026
       DJANGO_DEBUG: "true"
     steps:
       - uses: actions/checkout@v4
