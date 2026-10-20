@@ -2,15 +2,18 @@ import json
 import re
 
 import requests
+from django.core.exceptions import RequestDataTooBig
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
+from django_ratelimit.decorators import ratelimit
 
 from .models import Joke
 
 CHUCK_NORRIS_API_URL = "https://api.chucknorris.io/jokes/random"
 CATEGORY_PATTERN = re.compile(r"^[a-z0-9_-]{1,50}$")
 MAX_JOKE_LENGTH = 2000
+MAX_REQUEST_BYTES = 16 * 1024
 
 
 def index(request):
@@ -18,7 +21,14 @@ def index(request):
 
 
 @require_GET
+@ratelimit(key="ip", rate="30/m", method="GET", block=False)
 def get_joke(request):
+    if getattr(request, "limited", False):
+        return JsonResponse(
+            {"error": "Too many requests. Please try again in a minute."},
+            status=429,
+        )
+
     category = (request.GET.get("category") or "").strip()
     if category and not CATEGORY_PATTERN.fullmatch(category):
         return JsonResponse({"error": "Invalid category."}, status=400)
@@ -40,14 +50,40 @@ def get_joke(request):
 
 
 @require_POST
+@ratelimit(key="ip", rate="10/m", method="POST", block=False)
 def add_joke(request):
+    if getattr(request, "limited", False):
+        return JsonResponse(
+            {"status": "error", "message": "Too many requests. Please try again in a minute."},
+            status=429,
+        )
+
     if request.content_type != "application/json":
         return JsonResponse(
             {"status": "error", "message": "Content-Type must be application/json."},
             status=415,
         )
+
+    content_length = request.META.get("CONTENT_LENGTH")
+    if content_length:
+        try:
+            if int(content_length) > MAX_REQUEST_BYTES:
+                return JsonResponse(
+                    {"status": "error", "message": "Request body is too large."},
+                    status=413,
+                )
+        except ValueError:
+            return JsonResponse(
+                {"status": "error", "message": "Invalid Content-Length."}, status=400
+            )
+
     try:
-        data = json.loads(request.body)
+        body = request.body
+        data = json.loads(body)
+    except RequestDataTooBig:
+        return JsonResponse(
+            {"status": "error", "message": "Request body is too large."}, status=413
+        )
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({"status": "error", "message": "Invalid JSON."}, status=400)
 
