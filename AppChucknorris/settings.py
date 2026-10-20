@@ -74,7 +74,22 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "AppChucknorris" / "static"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Reject unexpectedly large request bodies before application-level JSON parsing.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024
+
 if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
     SECURE_REFERRER_POLICY = "same-origin"
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SECURE_SSL_REDIRECT", "true").lower() in {
+        "1", "true", "yes"
+    }
+    SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "0"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get(
+        "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", "false"
+    ).lower() in {"1", "true", "yes"}
+    SECURE_HSTS_PRELOAD = os.environ.get("DJANGO_SECURE_HSTS_PRELOAD", "false").lower() in {
+        "1", "true", "yes"
+    }
