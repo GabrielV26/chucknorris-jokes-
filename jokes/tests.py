@@ -2,6 +2,7 @@ import json
 from unittest.mock import Mock, patch
 
 import requests
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
@@ -9,6 +10,9 @@ from .models import Joke
 
 
 class GetJokeTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
     @patch("jokes.views.requests.get")
     def test_returns_random_joke(self, mock_get):
         response_mock = Mock()
@@ -43,6 +47,11 @@ class GetJokeTests(TestCase):
         response = self.client.get(reverse("random_joke"))
         self.assertEqual(response.status_code, 502)
 
+    @patch("jokes.views.requests.get", side_effect=requests.HTTPError("upstream failed"))
+    def test_handles_api_http_error(self, _mock_get):
+        response = self.client.get(reverse("random_joke"))
+        self.assertEqual(response.status_code, 502)
+
     @patch("jokes.views.requests.get")
     def test_handles_malformed_api_response(self, mock_get):
         response_mock = Mock()
@@ -53,12 +62,29 @@ class GetJokeTests(TestCase):
         response = self.client.get(reverse("random_joke"))
         self.assertEqual(response.status_code, 502)
 
+    def test_rate_limits_random_joke_endpoint(self):
+        with patch("jokes.views.requests.get") as mock_get:
+            response_mock = Mock()
+            response_mock.json.return_value = {"value": "A funny joke"}
+            response_mock.raise_for_status.return_value = None
+            mock_get.return_value = response_mock
+
+            for _ in range(30):
+                response = self.client.get(reverse("random_joke"))
+                self.assertEqual(response.status_code, 200)
+
+            limited_response = self.client.get(reverse("random_joke"))
+            self.assertEqual(limited_response.status_code, 429)
+
     def test_rejects_non_get_method(self):
         response = self.client.post(reverse("random_joke"))
         self.assertEqual(response.status_code, 405)
 
 
 class AddJokeTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
     def post_json(self, payload):
         return self.client.post(
             reverse("add_joke"),
@@ -92,6 +118,24 @@ class AddJokeTests(TestCase):
         response = self.post_json({"text": "x" * 2001})
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Joke.objects.count(), 0)
+
+    def test_rejects_oversized_request_body(self):
+        response = self.client.post(
+            reverse("add_joke"),
+            data=json.dumps({"text": "x" * (17 * 1024)}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 413)
+        self.assertEqual(Joke.objects.count(), 0)
+
+    def test_rate_limits_joke_saving(self):
+        for index in range(10):
+            response = self.post_json({"text": f"Joke {index}"})
+            self.assertEqual(response.status_code, 201)
+
+        limited_response = self.post_json({"text": "One too many"})
+        self.assertEqual(limited_response.status_code, 429)
+        self.assertEqual(Joke.objects.count(), 10)
 
     def test_rejects_wrong_content_type(self):
         response = self.client.post(
