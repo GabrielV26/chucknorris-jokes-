@@ -94,7 +94,11 @@ class AddJokeTests(TestCase):
         self.assertEqual(Joke.objects.count(), 0)
 
     def test_rejects_wrong_content_type(self):
-        response = self.client.post(reverse("add_joke"), data="text=hello")
+        response = self.client.post(
+            reverse("add_joke"),
+            data="text=hello",
+            content_type="application/x-www-form-urlencoded",
+        )
         self.assertEqual(response.status_code, 415)
 
     def test_rejects_non_post_method(self):
