@@ -1,23 +1,49 @@
-# app-chucknorris
+# Chuck Norris Jokes
 
-Este é um projeto Django que exibe piadas aleatórias do Chuck Norris e permite salvar suas piadas.
+A small Django application that fetches random jokes from the [Chuck Norris API](https://api.chucknorris.io/) and lets users save jokes in a local SQLite database.
 
-## API do Chuck Norris
+## Features
 
-Este projeto utiliza a [API do Chuck Norris](https://api.chucknorris.io/) para obter as piadas. A API fornece uma ampla variedade de piadas sobre Chuck Norris em diferentes categorias, e permite buscar piadas específicas ou piadas aleatórias.
+- Fetch a random joke, optionally filtered by category.
+- Save a joke through a JSON endpoint.
+- Validate incoming data and return meaningful HTTP status codes.
+- Apply request timeouts and handle upstream API failures.
 
-Para mais detalhes sobre a API, consulte a [documentação oficial](https://api.chucknorris.io/documentation).
+## Requirements
 
-## Como usar
+- Python 3.10 or newer
+- pip
 
-1. Clone o repositório
+## Setup
 
-2. Crie e ative um ambiente virtual
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
 
-3. Instale as dependências: pip install -r requirements.txt
+On Windows PowerShell, activate with `.venv\\Scripts\\Activate.ps1`.
 
-4. Aplique as migrações: python manage.py migrate
+Set `DJANGO_SECRET_KEY` to a private random value before deployment. Configure `DJANGO_DEBUG=false` and `DJANGO_ALLOWED_HOSTS` as a comma-separated list of allowed hostnames in deployed environments. Never commit secrets to Git.
 
-5. Inicie o servidor: python manage.py runserver
+## Endpoints
 
-6. Acesse no navegador: http://127.0.0.1:8000/
+- `GET /` — application interface.
+- `GET /random_joke/` — returns a random joke as JSON. Optional query parameter: `category`.
+- `POST /add_joke/` — saves a joke. Send `Content-Type: application/json` and a body such as `{"text":"A joke" }`. Text must contain 1–2000 characters.
+
+The save endpoint is protected by Django CSRF middleware; browser requests should include the CSRF token.
+
+## Checks
+
+```bash
+python manage.py test
+python manage.py check
+```
+
+## Tech stack
+
+Python, Django, SQLite, Requests, HTML, CSS and JavaScript.
